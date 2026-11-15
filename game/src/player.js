@@ -20,7 +20,6 @@ export class Player {
     this.hullMax = PLAYER.hullMax;
     this.invuln = 0;
     this.fireTimer = 0;
-    this.respawnTimer = 0;
     this.shield = 0;
     this.overdrive = 0;
     // Upgradeable stats; the draft screen mutates these.
@@ -44,10 +43,7 @@ export class Player {
   }
 
   update(dt, input, bounds, sound, particles) {
-    if (!this.alive) {
-      this.respawnTimer -= dt;
-      return;
-    }
+    if (!this.alive) return;
     this.invuln = Math.max(0, this.invuln - dt);
     this.shield = Math.max(0, this.shield - dt);
     this.overdrive = Math.max(0, this.overdrive - dt);
@@ -126,7 +122,6 @@ export class Player {
     this.invuln = PLAYER.invulnSeconds;
     if (this.hull <= 0) {
       this.alive = false;
-      this.respawnTimer = PLAYER.respawnDelay;
       return 'dead';
     }
     return 'hit';

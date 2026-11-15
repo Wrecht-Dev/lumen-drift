@@ -13,6 +13,7 @@ export class ShotDirector {
     this.input = deps.input;
     this.rng = deps.rng;
     this.startGame = deps.startGame;
+    this.gameOver = deps.gameOver;
     this.killEnemy = deps.killEnemy;
     this.hurtPlayer = deps.hurtPlayer;
     this.updatePlaying = deps.updatePlaying;
@@ -21,12 +22,29 @@ export class ShotDirector {
   }
 
   // One fixed-timestep step of the world, with scripted input.
+  // Mirrors the live frame loop: while dying, only the death timer runs.
   step(script) {
     if (script) script(this);
-    this.updatePlaying(DT);
+    if (this.game.state === 'dying') {
+      this.game.dyingTimer -= DT;
+      if (this.game.dyingTimer <= 0) this.gameOver();
+    } else {
+      this.updatePlaying(DT);
+    }
     this.renderer.beginFrame(DT);
     this.drawFrame();
     this.renderer.endFrame();
+  }
+
+  // If a wave cleared mid-sim, take the first upgrade and start the next
+  // wave so the sim keeps playing instead of stalling on the draft screen.
+  advanceDraft() {
+    const g = this.game;
+    if (g.state === 'draft' && this.waves.draft) {
+      this.waves.applyDraft(0, this.player);
+      this.waves.startWave(this.waves.wave + 1);
+      g.state = 'playing';
+    }
   }
 
   // Aim at the nearest enemy, hold fire, and drift in a slow orbit so the
@@ -76,7 +94,19 @@ export class ShotDirector {
     }
     if (mode === 'play') {
       this.startGame();
-      for (let i = 0; i < 60 * 7; i++) this.step(() => this.combatScript());
+      // Fight into wave 2+ and freeze while the arena is still busy:
+      // wave 1 alone is mostly cleared by the time the scripted ship
+      // stops, which left a near-empty frame. Wait for a moment with
+      // several enemies up AND the ship near the middle of the field,
+      // so the frame reads as an arena in full swing even at 256 px.
+      // Cap the sim so a bad seed still produces a frame, not a hang.
+      let i = 0;
+      for (; i < 60 * 40; i++) {
+        this.advanceDraft();
+        this.step(() => this.combatScript());
+        const centered = Math.abs(this.player.x - 640) < 220 && Math.abs(this.player.y - 400) < 160;
+        if (this.waves.wave >= 2 && this.game.enemies.length >= 4 && centered) break;
+      }
       this.input.mouseDown = false;
       done();
       return;
@@ -102,16 +132,28 @@ export class ShotDirector {
       // Earn a real score first, then stop fighting and die.
       for (let i = 0; i < 60 * 8; i++) this.step(() => this.combatScript());
       this.input.mouseDown = false;
+      // The combat above usually clears wave 1, which parks the game on
+      // the draft screen — idling there never kills the player.
+      this.advanceDraft();
       let i = 0;
-      for (; i < 60 * 150 && g.state !== 'gameover'; i++) this.step(() => this.idleScript());
+      for (; i < 60 * 150 && g.state !== 'gameover'; i++) {
+        this.advanceDraft();
+        this.step(() => this.idleScript());
+      }
       if (g.state !== 'gameover') {
         // Force the end through the game's own damage path.
         for (let k = 0; k < 3 && g.state !== 'gameover'; k++) {
           this.player.invuln = 0;
           this.player.shield = 0;
           this.hurtPlayer();
-          for (let j = 0; j < 90 && g.state !== 'gameover'; j++) this.step(() => this.idleScript());
+          // Dying lasts PLAYER.dyingSeconds (1.7 s = 102 frames); step
+          // well past it so the SHIP LOST screen is showing at capture,
+          // not the explosion mid-frame.
+          for (let j = 0; j < 150 && g.state !== 'gameover'; j++) this.step(() => this.idleScript());
         }
+      }
+      if (g.state !== 'gameover') {
+        throw new Error(`shot 'end' did not reach gameover (state=${g.state}, score=${g.score})`);
       }
       done();
       return;

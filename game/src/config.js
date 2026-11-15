@@ -45,7 +45,7 @@ export const PLAYER = {
   bulletRadius: 5,
   bulletDamage: 1,
   bulletLife: 0.9,
-  respawnDelay: 1.2,
+  dyingSeconds: 1.7, // death animation before the SHIP LOST screen
 };
 
 export const COMBO = {
@@ -157,48 +157,56 @@ export const UPGRADES = [
     id: 'rapid',
     name: 'Rapid Cycler',
     desc: '+25% fire rate',
+    icon: { sides: 3, rotation: 0 },
     apply: (s) => { s.fireInterval *= 0.75; },
   },
   {
     id: 'heavy',
     name: 'Heavy Rounds',
     desc: '+1 bullet damage',
+    icon: { sides: 4, rotation: 0 },
     apply: (s) => { s.bulletDamage += 1; },
   },
   {
     id: 'twin',
     name: 'Twin Mount',
     desc: '+1 projectile per shot',
+    icon: { sides: 6, rotation: 0 },
     apply: (s) => { s.projectiles += 1; },
   },
   {
     id: 'pierce',
     name: 'Piercing Rounds',
     desc: 'Shots pass through +1 enemy',
+    icon: { sides: 5, rotation: 0 },
     apply: (s) => { s.pierce += 1; },
   },
   {
     id: 'thrusters',
     name: 'Ion Thrusters',
     desc: '+15% move speed',
+    icon: { sides: 3, rotation: Math.PI },
     apply: (s) => { s.maxSpeed *= 1.15; },
   },
   {
     id: 'plating',
     name: 'Ablative Plating',
     desc: '+1 max hull, repair 1',
+    icon: { sides: 8, rotation: 0 },
     apply: (s) => { s.hullMax += 1; s.hull = Math.min(s.hullMax, s.hull + 1); },
   },
   {
     id: 'magnet',
     name: 'Tractor Web',
     desc: 'Gems fly to you from farther away',
+    icon: { sides: 4, rotation: Math.PI / 4 },
     apply: (s) => { s.magnetRadius *= 1.8; },
   },
   {
     id: 'velocity',
     name: 'Rail Coils',
     desc: '+20% bullet speed and range',
+    icon: { sides: 7, rotation: 0 },
     apply: (s) => { s.bulletSpeed *= 1.2; s.bulletLife *= 1.2; },
   },
 ];

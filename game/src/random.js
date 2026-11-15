@@ -26,10 +26,6 @@ export function makeRng(seed) {
     int(min, max) {
       return Math.floor(min + next() * (max - min + 1));
     },
-    // Pick one element of an array.
-    pick(array) {
-      return array[Math.floor(next() * array.length)];
-    },
     // Pick with weights: entries are { value, weight }.
     weighted(entries) {
       let total = 0;

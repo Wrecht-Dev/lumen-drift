@@ -233,7 +233,7 @@ export class Renderer {
     ctx.restore();
   }
 
-  drawEnemies(enemies) {
+  drawEnemies(enemies, withBars = true) {
     const ctx = this.ctx;
     for (const e of enemies) {
       ctx.save();
@@ -265,6 +265,7 @@ export class Renderer {
         ctx.fill();
       }
       ctx.restore();
+      if (!withBars) continue;
       // Boss health bar above the boss.
       if (e.type === 'warden') {
         const w = 150;
@@ -365,6 +366,9 @@ export class Renderer {
   drawCenterPanel(title, lines, accent = PALETTE.accent) {
     const ctx = this.ctx;
     ctx.save();
+    // Dim the field behind the panel, as the draft screen does.
+    ctx.fillStyle = 'rgba(4, 6, 18, 0.55)';
+    ctx.fillRect(0, 0, VIEW.width, VIEW.height);
     ctx.textAlign = 'center';
     ctx.fillStyle = PALETTE.text;
     ctx.font = '800 54px "Segoe UI", system-ui, sans-serif';
@@ -481,11 +485,13 @@ export class Renderer {
       ctx.fillStyle = PALETTE.textDim;
       ctx.font = '400 17px "Segoe UI", system-ui, sans-serif';
       ctx.fillText(up.desc, x + cw / 2, y + 116);
-      // Card icon: a small glowing glyph per upgrade id.
+      // Card icon: a small glowing glyph, distinct per upgrade id.
       ctx.fillStyle = PALETTE.player;
       ctx.shadowColor = PALETTE.player;
       ctx.shadowBlur = 10;
-      polygon(ctx, x + cw / 2, y + 152, 12, up.id === 'twin' ? 2 : 5, this.time * 0.5);
+      const sides = up.icon ? up.icon.sides : 5;
+      const rot = up.icon ? up.icon.rotation : 0;
+      polygon(ctx, x + cw / 2, y + 152, 12, sides, rot + this.time * 0.5);
       ctx.fill();
       ctx.shadowBlur = 0;
     });

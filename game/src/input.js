@@ -9,6 +9,7 @@ export class Input {
     this.mouseX = 0;
     this.mouseY = 0;
     this.mouseDown = false;
+    this.clicked = false; // edge-triggered: consumed by takeClicked
     this.pressedKeys = new Set(); // edge-triggered: consumed by takePressed
     this._onKeyDown = (e) => {
       if (e.repeat) return;
@@ -27,7 +28,10 @@ export class Input {
       this.mouseY = (e.clientY - rect.top) * scaleY;
     };
     this._onMouseDown = (e) => {
-      if (e.button === 0) this.mouseDown = true;
+      if (e.button === 0) {
+        this.mouseDown = true;
+        this.clicked = true;
+      }
       this._onMouseMove(e);
     };
     this._onMouseUp = (e) => {
@@ -58,10 +62,14 @@ export class Input {
     return false;
   }
 
-  // True if any of the given codes was pressed since the last frame.
-  takeAnyPressed(codes) {
-    for (const code of codes) {
-      if (this.takePressed(code)) return true;
+  // True once per physical click; clears after being read.
+  // State transitions (start, pause, draft, restart) read this, never
+  // the mouseDown level — a button held from firing must not re-trigger
+  // a transition on the frame after the state changes.
+  takeClicked() {
+    if (this.clicked) {
+      this.clicked = false;
+      return true;
     }
     return false;
   }
@@ -88,5 +96,6 @@ export class Input {
 
   clearPressed() {
     this.pressedKeys.clear();
+    this.clicked = false;
   }
 }

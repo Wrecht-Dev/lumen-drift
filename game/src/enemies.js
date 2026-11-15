@@ -3,12 +3,9 @@
 
 import { ENEMIES, VIEW } from './config.js';
 
-let nextId = 1;
-
 export class Enemy {
   constructor(type, x, y, rng) {
     const spec = ENEMIES[type];
-    this.id = nextId++;
     this.type = type;
     this.spec = spec;
     this.x = x;
@@ -125,12 +122,14 @@ export class Enemy {
       }
     }
 
-    // Stay on screen; drifters that wander off the edge wrap back in.
+    // Stay inside the arena: clamp at the edges. Enemies used to wrap
+    // to the opposite side, which read as a teleport — a chaser could
+    // vanish off the left edge and pop in on the right behind the
+    // player. Clamped chasers steer back in toward the player on their
+    // own; the margin lets spawns just outside the view drift in.
     const m = this.radius + 8;
-    if (this.x < -m) this.x = VIEW.width + m - 1;
-    if (this.x > VIEW.width + m) this.x = -m + 1;
-    if (this.y < -m) this.y = VIEW.height + m - 1;
-    if (this.y > VIEW.height + m) this.y = -m + 1;
+    this.x = Math.max(-m, Math.min(VIEW.width + m, this.x));
+    this.y = Math.max(-m, Math.min(VIEW.height + m, this.y));
     return fired;
   }
 

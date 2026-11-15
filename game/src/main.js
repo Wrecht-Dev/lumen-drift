@@ -36,7 +36,6 @@ const game = {
   state: 'title', // title | playing | draft | paused | gameover | dying
   score: 0,
   best: 0,
-  wave: 0,
   comboCount: 0,
   comboTimer: 0,
   comboMult: 1,
@@ -90,7 +89,6 @@ function startGame() {
   pickups.clear();
   player.reset(VIEW.width / 2, VIEW.height - 160);
   waves.startWave(1);
-  game.wave = 1;
   game.state = 'playing';
   game.bannerText = 'WAVE 1';
   game.bannerTimer = 1.6;
@@ -112,9 +110,11 @@ function gameOver() {
 }
 
 function nextWave() {
-  const bonus = WAVES.clearBonus * game.wave;
+  const bonus = WAVES.clearBonus * waves.wave;
   game.score += bonus;
-  particles.floatText(VIEW.width / 2, VIEW.height / 2 - 60, `WAVE BONUS +${bonus}`, '#5ef2b8', 20);
+  // Above the draft card row (cards start at y 290): the float text is
+  // frozen while the draft is open, so it must not sit on a card title.
+  particles.floatText(VIEW.width / 2, VIEW.height / 2 - 150, `WAVE BONUS +${bonus}`, '#5ef2b8', 20);
   sound.waveClear();
   waves.rollDraft();
   game.state = 'draft';
@@ -126,10 +126,9 @@ function chooseUpgrade(index) {
   if (!picked) return;
   sound.upgrade();
   particles.ring(player.x, player.y, '#7df9ff', 120);
-  waves.startWave(game.wave + 1);
-  game.wave += 1;
+  waves.startWave(waves.wave + 1);
   game.state = 'playing';
-  game.bannerText = `WAVE ${game.wave}`;
+  game.bannerText = `WAVE ${waves.wave}`;
   game.bannerTimer = 1.6;
   sound.waveStart();
   updateStatus();
@@ -177,7 +176,7 @@ function hurtPlayer() {
     renderer.addShake(16);
     sound.explode(true);
     game.state = 'dying';
-    game.dyingTimer = PLAYER.respawnDelay + 0.5;
+    game.dyingTimer = PLAYER.dyingSeconds;
   }
   updateStatus();
 }
@@ -294,10 +293,10 @@ function updateStatus() {
   if (!el) return;
   const lines = {
     title: 'Lumen Drift. Press Enter to launch.',
-    playing: `Wave ${game.wave}. Score ${game.score}. Hull ${player.hull} of ${player.hullMax}.`,
-    draft: `Wave ${game.wave} cleared. Choose an upgrade.`,
+    playing: `Wave ${waves.wave}. Score ${game.score}. Hull ${player.hull} of ${player.hullMax}.`,
+    draft: `Wave ${waves.wave} cleared. Choose an upgrade.`,
     paused: 'Paused.',
-    gameover: `Game over. Score ${game.score} on wave ${game.wave}. Press Enter to fly again.`,
+    gameover: `Game over. Score ${game.score} on wave ${waves.wave}. Press Enter to fly again.`,
     dying: 'Ship lost.',
   };
   el.textContent = lines[game.state] || '';
@@ -306,7 +305,7 @@ function updateStatus() {
 function drawFrame() {
   renderer.bannerT = game.bannerTimer > 0 ? game.bannerTimer / 1.6 : 0;
   if (game.state === 'title') {
-    renderer.drawEnemies(game.enemies);
+    renderer.drawEnemies(game.enemies, false);
     renderer.drawTitle(game.best);
   } else {
     renderer.drawPickups(pickups);
@@ -316,7 +315,7 @@ function drawFrame() {
     renderer.drawParticles(particles);
     renderer.drawHud({
       score: game.score,
-      wave: game.wave,
+      wave: waves.wave,
       hull: Math.max(0, player.hull),
       hullMax: player.hullMax,
       comboCount: game.comboCount,
@@ -328,9 +327,9 @@ function drawFrame() {
       waveState: waves.queue.length > 0 ? 'incoming' : 'clear',
     });
     if (game.bannerTimer > 0 && game.state === 'playing') renderer.drawWaveBanner(game.bannerText);
-    if (game.state === 'draft' && waves.draft) renderer.drawDraft(waves.draft, game.wave);
+    if (game.state === 'draft' && waves.draft) renderer.drawDraft(waves.draft, waves.wave);
     if (game.state === 'paused') renderer.drawPaused();
-    if (game.state === 'gameover') renderer.drawGameOver(game.score, game.wave, game.best, game.newBest);
+    if (game.state === 'gameover') renderer.drawGameOver(game.score, waves.wave, game.best, game.newBest);
   }
 }
 
@@ -340,20 +339,20 @@ function handleGlobalKeys() {
     game.state = game.state === 'playing' ? 'paused' : 'playing';
     updateStatus();
   }
-  if (game.state === 'title' && (input.takePressed('Enter') || input.takePressed('Space') || input.mouseDown)) {
+  if (game.state === 'title' && (input.takePressed('Enter') || input.takePressed('Space') || input.takeClicked())) {
     sound.unlock();
     startGame();
-  } else if (game.state === 'gameover' && (input.takePressed('Enter') || input.takePressed('Space') || input.mouseDown)) {
+  } else if (game.state === 'gameover' && (input.takePressed('Enter') || input.takePressed('Space') || input.takeClicked())) {
     sound.unlock();
     startGame();
-  } else if (game.state === 'paused' && (input.takePressed('Enter') || input.mouseDown)) {
+  } else if (game.state === 'paused' && (input.takePressed('Enter') || input.takeClicked())) {
     game.state = 'playing';
     updateStatus();
   } else if (game.state === 'draft') {
     if (input.takePressed('Digit1')) chooseUpgrade(0);
     else if (input.takePressed('Digit2')) chooseUpgrade(1);
     else if (input.takePressed('Digit3')) chooseUpgrade(2);
-    else if (input.mouseDown) {
+    else if (input.takeClicked()) {
       // Click a card: cards are laid out by drawDraft; recompute their boxes.
       const cw = 300;
       const ch = 190;
@@ -414,7 +413,7 @@ function frame(now) {
 window.__lumen = {
   get state() { return game.state; },
   get score() { return game.score; },
-  get wave() { return game.wave; },
+  get wave() { return waves.wave; },
   get hull() { return player.hull; },
   get enemies() { return game.enemies.length; },
   get ready() { return game.ready; },
@@ -424,7 +423,7 @@ window.__lumen = {
 
 // Screenshot mode: run the game headlessly through scripted play, then
 // freeze on a representative frame. See shots.js.
-const shots = new ShotDirector({ game, player, waves, input, rng, startGame, killEnemy, hurtPlayer, updatePlaying, drawFrame, renderer, nextWave });
+const shots = new ShotDirector({ game, player, waves, input, rng, startGame, gameOver, killEnemy, hurtPlayer, updatePlaying, drawFrame, renderer, nextWave });
 if (shotMode) {
   seedTitleScene();
   shots.run(shotMode, () => {

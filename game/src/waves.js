@@ -11,18 +11,12 @@ export class Waves {
     this.wave = 0;
     this.queue = []; // enemy types still to spawn this wave
     this.spawnTimer = 0;
-    this.betweenTimer = 0;
     this.draft = null; // three upgrade options, or null
-    this.bossSpawned = false;
   }
 
   get spawnInterval() {
     const v = WAVES.spawnIntervalStart - (this.wave - 1) * WAVES.spawnIntervalFalloff;
     return Math.max(WAVES.spawnIntervalMin, v);
-  }
-
-  get active() {
-    return this.queue.length > 0 || this.bossSpawned;
   }
 
   startWave(n) {
@@ -31,10 +25,8 @@ export class Waves {
     const count = WAVES.baseCount + (n - 1) * WAVES.perWave;
     const mix = WAVE_MIX.filter((m) => n >= m.fromWave).map((m) => ({ value: m.type, weight: m.weight }));
     for (let i = 0; i < count; i++) this.queue.push(this.rng.weighted(mix));
-    this.bossSpawned = false;
     if (n % WAVES.bossEvery === 0) {
       this.queue.push('warden');
-      this.bossSpawned = true;
     }
     // Shuffle so the boss is not always last.
     for (let i = this.queue.length - 1; i > 0; i--) {
