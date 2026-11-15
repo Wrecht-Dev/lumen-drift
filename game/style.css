@@ -1,0 +1,35 @@
+/* Lumen Drift — page chrome. The game itself is drawn on the canvas;
+   this only centers it on the page and keeps it readable. */
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #070a1a;
+}
+
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#game {
+  display: block;
+  width: min(100vw, 160vh);
+  height: auto;
+  max-height: 100vh;
+  aspect-ratio: 1280 / 800;
+  touch-action: none;
+  cursor: crosshair;
+  background: #070a1a;
+}
+
+/* Read aloud, never shown: the status line screen readers announce. */
+#status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
